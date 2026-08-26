@@ -1,0 +1,52 @@
+SALT BRINE
+GEOLOGY AND FIELD ACTIVITIES
+INTERPRETATION OF PHYSICO-CHEMICAL ANALYSIS RESULTS
+
+The Twenty-one (21) brine samples were subjected to physico-chemical, mineralogical
+and evaporation tests, while permeability test was conducted on the soil samples.
+
+Figures/Panels referenced on the poster:
+- Geological Map of the Benue Trough
+- Geological Map of the Benue Trough showing brine occurrences
+- Project Work Flow Chart (Pre-Processing Operations -> Ancillary Data -> Field Data
+  Acquisition -> Laboratory Analysis -> Data Integration and Classification ->
+  Supervised Classification -> Classified Output -> Post-Processing Operations ->
+  Diagrams, Imageries, Maps and Report)
+- Map of the Benue Trough showing brine occurrences investigated
+- Map of the Benue Trough showing brine occurrences investigated (soil permeability)
+- Map of the Benue Trough showing soil permeability
+- Maps of TDS, EC, and Soil Permeability distribution in Benue Trough
+- Field photos: Akiri warm spring, Nasarawa State; Field activities at Shagu, Gombe State
+- Finished salt samples: Finished Akparabong salt; Finished salt Akiri; Trona from Shagu Brine
+- Piper's Trilinear Plot
+- Schoeller's Plot
+- Durov's Plot
+- Gibb's Plot
+- Stacked Bars of Rare-Earth Elements (ppb)
+- Duplicate samples, Upper Benue Trough
+- Chondrite normalized average for REEs (Nakamura 1974)
+- XRD of Akiri Salts
+- XRD of Akparabong salts
+- Correlation matrix for metals in Brines of Benue Trough
+- Comparison plot of TDS and EC Concentrations vs pH Values
+- Comparison plot of major cations and chloride along the Benue Trough
+- Comparison of selected metals along BT (Benue Trough)
+
+Interpretation of physico-chemical analysis results:
+Piper and Schoeller's plots both show Na and Cl as the dominant cation and anion, with
+elevated concentration of Ca in Lower Benue Trough. Durov's plot shows reverse ion
+exchange being responsible for the variation in the hydro-geochemistry of the brines.
+Gibb's plot identified evaporation-crystallization and rock weathering as mainly
+responsible for the hydro-geochemistry of the brines.
+
+Key outcome from project:
+- An increase in recovery from lower to Upper Benue (Uburu in LBT, Keana in MBT, and
+  Shagu in UBT) gave 181g, 135g and 81g of salts per litre of extract respectively.
+- Purer salts in Middle and Upper Benue.
+- The Lower and the Middle Benue dominated by halite, while the Upper Benue dominated
+  by Trona and sylvite.
+- Heavy metal concentration increases from Upper Benue to Lower Benue.
+
+(Note: This poster is primarily a graphical layout — maps, plots, and photographs — with
+labels and captions as extracted above. The visual data itself, such as exact values on
+the charts and maps, is not represented in text form.)
