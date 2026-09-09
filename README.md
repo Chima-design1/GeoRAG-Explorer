@@ -1,123 +1,246 @@
 # GeoRAG Explorer
 
-**AI-powered geological knowledge retrieval system combining geological reports, maps, geochemical data, semantic search, and Retrieval-Augmented Generation.**
+**AI-powered geological knowledge retrieval system combining geological reports, geological maps, semantic search, lexical retrieval, reranking, and Retrieval-Augmented Generation (RAG).**
 
 ## Overview
 
-GeoRAG Explorer is a professional end-to-end geological Retrieval-Augmented Generation (RAG) system designed to answer complex questions about geological resources, mineral occurrences, geochemical anomalies, and geological formations using a corpus of geological documents, reports, and thematic maps.
+GeoRAG Explorer is an end-to-end geological Retrieval-Augmented Generation system designed to answer questions about geological resources, mineral occurrences, geochemical information, geological formations, exploration targets, and mining-related information using a corpus of geological reports and thematic maps.
 
-The system retrieves evidence from authoritative geological sources and generates grounded answers with full source traceability—essential for geological and mineral-resource applications where accuracy and provenance are critical.
+The system is designed around **grounded evidence retrieval**: answers are generated from retrieved geological evidence rather than relying on unsupported background knowledge. The pipeline also preserves document and map metadata to support source traceability.
+
+## Current Project Status
+
+The project has progressed substantially beyond the original text-only baseline.
+
+- **2 geological source documents** currently loaded
+- **551 geological report chunks**
+- **189 geological map chunks**
+- **740 combined chunks** in the retrieval corpus
+- Local sentence-transformer embeddings with `all-MiniLM-L6-v2`
+- Hybrid semantic + lexical retrieval
+- Candidate-pool retrieval and feature-based reranking
+- Diversity control and local context expansion
+- Factual-evidence strengthening for detail-heavy questions
+- Local `Qwen/Qwen2.5-0.5B-Instruct` answer generation
+- Automated evaluation against **30 test questions**
+- **30/30 questions successfully processed** in the latest evaluation
+
+### Latest Evaluation Result
+
+| Metric | Stage 4.5 Result |
+|---|---:|
+| Questions evaluated | 30 |
+| Successful questions | 30 |
+| Average retrieval | 1.1298 |
+| Average lexical | 0.5504 |
+| Average coverage | 0.6676 |
+| Average keyword | 0.6917 |
+| Average factual match | 0.2556 |
+| Average direct match | 0.3000 |
+| **Average answer quality** | **0.6558** |
+
+**Answer quality distribution:** 10 Excellent, 9 Good, 7 Fair, 4 Poor.
 
 ## Problem Statement
 
-Geologists, mineral explorers, and resource professionals need rapid, accurate access to geological information distributed across:
+Geologists, mineral explorers, researchers, and resource professionals often need rapid access to geological information distributed across:
 
 - Geological survey reports
-- Geochemical maps and anomaly data
+- Geological and geochemical maps
 - Mineral-resource assessments
 - State and regional geological documentation
 - Mineral-corridor and schist-belt mapping
+- Exploration-target documentation
 
-Traditional keyword search is insufficient for complex geological queries. GeoRAG Explorer uses semantic retrieval combined with grounded LLM generation to answer questions like:
-
-- *What minerals occur in Ogun State?*
-- *Where are copper anomalies reported?*
-- *What geological units are associated with lithium occurrences?*
-- *What are the strongest geochemical anomalies?*
-
-All answers include **verified sources and precise citations**.
+Traditional keyword search can struggle with complex geological questions that require combining terminology, locations, numbers, sections, and contextual evidence. GeoRAG Explorer addresses this with semantic retrieval, lexical matching, reranking, context expansion, and grounded generation.
 
 ## Architecture
 
-```
-                     User Question
-                           │
-                ┌──────────┴──────────┐
-                │                     │
-         Document Corpus         Configuration
-                │                     │
-                └──────────┬──────────┘
-                           │
-                    Document Loading
-                    & Cleaning
-                           │
-                    Chunk with Metadata
-                           │
-                    Generate Embeddings
-                    (OpenAI API)
-                           │
-                   Cache Embeddings
-                    (Local Storage)
-                           │
-                    Vector Retrieval
-                    (Cosine Similarity)
-                           │
-                    Top-K Evidence
-                           │
-                    LLM Generation
-                    (OpenAI API)
-                           │
-         ┌─────────────────┴─────────────────┐
-         │                                   │
-    Grounded Answer                   Source Citations
-    (with disclaimer)              (filename, title, URL)
+```text
+                         User Question
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+             Query Embedding      Query Analysis
+                    │                   │
+                    └─────────┬─────────┘
+                              │
+                    Hybrid Candidate Retrieval
+                    ┌─────────┴─────────┐
+                    │                   │
+              Semantic Search      Lexical Search
+                    │                   │
+                    └─────────┬─────────┘
+                              │
+                       Candidate Pool
+                              │
+                     Feature-based Reranking
+                              │
+                       Diversity Control
+                              │
+                       Context Expansion
+                              │
+                  Factual Evidence Strengthening
+                              │
+                     Grounded Context
+                              │
+                   Local Qwen Generation
+                              │
+                  ┌───────────┴───────────┐
+                  │                       │
+             Grounded Answer         Source Evidence
 ```
 
-### Phase 1 — Text Document Pipeline
+## Data Processing Pipeline
 
-**Phase 1 implements the complete text-based retrieval pipeline:**
+### Geological Reports
 
-```
-Geological Reports (TXT)
-         ↓
+```text
+PDF / TXT Geological Reports
+          ↓
 Document Loading
-         ↓
-Text Cleaning
-         ↓
-Metadata Extraction
-         ↓
-Chunking (with metadata preservation)
-         ↓
-OpenAI Embeddings (cached locally)
-         ↓
-Vector Index (NumPy + cosine similarity)
-         ↓
-Retrieval & Ranking
-         ↓
-LLM Generation (grounded with sources)
+          ↓
+Text Extraction & Cleaning
+          ↓
+Metadata Preservation
+          ↓
+Chunking with Metadata
+          ↓
+Local Embeddings
+          ↓
+Cached Combined Embedding Index
 ```
 
-### Future Phases
+### Geological Maps
 
-- **Phase 2**: PDF geological report extraction
-- **Phase 3**: Geological map processing (inspection, OCR, metadata extraction)
-- **Phase 4**: Hybrid retrieval (semantic + BM25 + metadata filtering)
-- **Phase 5**: Reranking
-- **Phase 6**: Evaluation against geological test questions
-- **Phase 7**: Portfolio presentation (architecture diagrams, screenshots, evaluation results)
+```text
+Geological Map PDFs
+          ↓
+PDF / Vector / Image Inspection
+          ↓
+Text Extraction
+          ↓
+Embedded Image Extraction
+          ↓
+High-resolution Rendering
+          ↓
+OCR for Image-based Maps
+          ↓
+Map Text Cleaning
+          ↓
+Map Chunk Construction
+          ↓
+Combined Retrieval Corpus
+```
 
-## Data Sources
+The current map corpus contains **29 processed geological map PDFs**, including corridor, schist-belt, state, national, and regional map material.
 
-### Current (Phase 1)
+## Retrieval and Reranking
 
-- **Geological Reports**: Text documents from publicly available Nigerian Geological Survey Agency (NGSA) reports
-- **Location**: `data/reports/`
-- **Format**: UTF-8 text files (`.txt`)
+The current retrieval pipeline has evolved through several controlled stages.
 
-### Planned (Future Phases)
+### Stage 4.1 — Candidate Pool
 
-- Geological PDF reports
-- Geological maps (national, state-level, geochemical, mineral-corridor, schist-belt)
-- Mineral-resource maps
-- Geochemical anomaly maps
-- Additional geological surveys and institutions (extensible architecture)
+Retrieval first creates a larger candidate pool before selecting the final evidence set. This gives later ranking stages more relevant candidates to work with.
+
+### Stage 4.2 — Feature-based Reranking
+
+Candidate results are reranked using the original combined retrieval score together with additional lexical and domain-specific signals.
+
+### Stage 4.3 — Diversity Control
+
+The final evidence set reduces unnecessary near-duplicate chunks so that multiple retrieved results can provide complementary evidence.
+
+### Stage 4.4 — Context Expansion
+
+Nearby chunks from the same document are considered to preserve local context around highly relevant evidence while avoiding obvious table-of-contents entries.
+
+### Stage 4.5 — Factual-Evidence Strengthening
+
+The retriever now gives additional weight to evidence containing factual details relevant to the question, including:
+
+- Explicit numbers and percentages
+- Section identifiers
+- Target Uranium identifiers
+- Factual query terms such as location, depth, grade, results, and recommendations
+
+This stage improved the latest average answer-quality score from **0.6327 to 0.6558**.
+
+## Grounded Generation
+
+The system uses the local instruction model:
+
+```text
+Qwen/Qwen2.5-0.5B-Instruct
+```
+
+The generation pipeline is designed to:
+
+1. Use retrieved geological evidence
+2. Avoid unsupported geological claims
+3. State when available evidence is insufficient
+4. Preserve important geological terminology
+5. Prefer explicit evidence over unsupported inference
+6. Provide source information alongside the generated answer
+
+For high-risk factual questions, the pipeline also includes deterministic extraction logic for information such as numerical values, locations, map-selected states, financing, project purposes, results, and recommendations.
+
+## Evaluation
+
+The project includes an automated evaluation pipeline in `src/evaluation.py` using the geological test-question dataset at `data/test_questions.csv`.
+
+Run the full evaluation with:
+
+```bash
+python -m src.evaluation
+```
+
+Results are written to:
+
+```text
+artifacts/evaluation_results.json
+```
+
+The evaluation tracks retrieval and answer-oriented metrics including retrieval score, lexical relevance, evidence coverage, keyword matching, factual matching, direct matching, and overall answer quality.
+
+### Latest Benchmark
+
+The current Stage 4.5 benchmark contains **30 questions**, with all 30 successfully processed.
+
+```text
+Average answer quality: 0.6558
+
+Excellent: 10
+Good:      9
+Fair:      7
+Poor:      4
+```
+
+## Tests
+
+The current automated regression test suite contains **20 passing tests**.
+
+Run:
+
+```bash
+python -m pytest -q
+```
+
+Expected result for the current checkpoint:
+
+```text
+20 passed
+```
 
 ## Installation
 
 ### Prerequisites
 
 - Python 3.9+
-- OpenAI API key (for embeddings and LLM generation)
+- Windows, Linux, or macOS
+- Sufficient local storage for geological PDFs, OCR outputs, and embedding caches
+
+The current working configuration uses local embedding and language models, so an OpenAI API key is **not required for the current local RAG pipeline**.
 
 ### Setup
 
@@ -127,140 +250,80 @@ git clone https://github.com/Chima-design1/GeoRAG-Explorer.git
 cd GeoRAG-Explorer
 
 # Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv .venv
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env and add your OpenAI API key
-```
-
-### Environment Variables
-
-Create a `.env` file based on `.env.example`:
-
-```bash
-# Required
-OPENAI_API_KEY=sk-...
-
-# Optional (defaults provided)
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-OPENAI_CHAT_MODEL=gpt-4-turbo
-LOG_LEVEL=INFO
 ```
 
 ## Usage
 
-### Basic Retrieval-Augmented Generation
+The main end-to-end pipeline is implemented in `src/rag_pipeline.py`.
+
+A typical query follows this workflow:
 
 ```python
 from src.config import Config
-from src.document_loader import DocumentLoader
-from src.chunker import Chunker
-from src.embeddings import EmbeddingGenerator
-from src.retriever import VectorRetriever
-from src.rag import RAG
+from src.rag_pipeline import RAGPipeline
 
-# Initialize config
 config = Config()
+rag = RAGPipeline(config)
 
-# Load and process documents
-loader = DocumentLoader(config.reports_dir)
-documents = loader.load_all()
+result = rag.query(
+    "What minerals occur in Ogun State?",
+    top_k=5,
+)
 
-# Chunk documents
-chunker = Chunker()
-chunks = chunker.chunk_documents(documents)
+print("Answer:", result["answer"])
 
-# Generate embeddings (cached after first run)
-embedding_gen = EmbeddingGenerator(config)
-embeddings = embedding_gen.embed_chunks(chunks, cache_path="artifacts/embeddings.pkl")
-
-# Initialize retriever
-retriever = VectorRetriever(chunks, embeddings)
-
-# Create RAG pipeline
-rag = RAG(retriever, config)
-
-# Ask a geological question
-answer = rag.query("What minerals occur in Ogun State?", top_k=5)
-
-print("Answer:", answer["answer"])
-print("\nSources:")
-for source in answer["sources"]:
-    print(f"  - {source['title']} ({source['source_file']})")
-```
-
-### Jupyter Notebooks
-
-Start with the provided notebooks:
-
-- **01_data_exploration.ipynb** – Explore loaded reports
-- **02_document_processing.ipynb** – Test chunking and embedding quality
-- **03_retrieval_evaluation.ipynb** – Evaluate retrieval performance
-- **04_rag_evaluation.ipynb** – Full pipeline evaluation
-
-```bash
-jupyter notebook notebooks/
+print("Sources:")
+for source in result["sources"]:
+    print(source)
 ```
 
 ## Project Structure
 
-```
+```text
 GeoRAG-Explorer/
 │
-├── README.md                           # This file
-├── LICENSE                             # MIT License
-├── requirements.txt                    # Python dependencies
-├── .env.example                        # Example environment configuration
-├── .gitignore                          # Git ignore rules
+├── README.md
+├── LICENSE
+├── requirements.txt
+├── .env.example
+├── .gitignore
 │
 ├── data/
-│   ├── reports/                        # Geological text reports
-│   ├── maps/                           # (Phase 3) Geological maps
+│   ├── reports/                    # Geological reports
+│   ├── maps/                       # Geological map corpus
 │   │   ├── national/
 │   │   ├── state/
-│   │   ├── geochemical/
 │   │   ├── corridors/
-│   │   ├── schist_belts/
-│   │   └── geological/
-│   └── test_questions.csv              # (Phase 6) Geological evaluation questions
+│   │   └── schist_belts/
+│   └── test_questions.csv          # Evaluation questions
 │
 ├── src/
-│   ├── __init__.py
-│   ├── config.py                       # Configuration management
-│   ├── logger.py                       # Logging utilities
-│   ├── document_loader.py              # Load TXT reports
-│   ├── pdf_processor.py                # (Phase 2) Extract text from PDFs
-│   ├── map_processor.py                # (Phase 3) Process geological maps
-│   ├── chunker.py                      # Chunk documents with metadata
-│   ├── embeddings.py                   # Embedding generation & caching
-│   ├── retriever.py                    # Vector retrieval (semantic search)
-│   ├── reranker.py                     # (Phase 5) Reranking
-│   ├── rag.py                          # RAG pipeline (retrieve + generate)
-│   ├── scraper.py                      # (Optional) Scrape geological reports
-│   └── evaluation.py                   # Evaluation metrics
-│
-├── notebooks/
-│   ├── 01_data_exploration.ipynb       # Explore reports
-│   ├── 02_document_processing.ipynb    # Test processing pipeline
-│   ├── 03_retrieval_evaluation.ipynb   # Retrieval metrics
-│   └── 04_rag_evaluation.ipynb         # Full RAG evaluation
-│
-├── assets/
-│   ├── architecture.png                # (Phase 7) Architecture diagram
-│   ├── rag-demo.png                    # (Phase 7) Example Q&A
-│   └── evaluation.png                  # (Phase 7) Evaluation results
+│   ├── config.py                   # Configuration management
+│   ├── document_loader.py          # TXT/PDF document loading
+│   ├── pdf_processor.py            # PDF extraction
+│   ├── map_processor.py            # Geological map processing/OCR
+│   ├── map_corpus.py               # Map cleaning/chunking/indexing
+│   ├── chunker.py                  # Metadata-preserving chunking
+│   ├── embeddings.py               # Local embeddings and caching
+│   ├── retriever.py                # Hybrid retrieval/reranking
+│   ├── rag_pipeline.py             # End-to-end RAG pipeline
+│   ├── evaluation.py               # Automated evaluation
+│   └── logger.py                   # Logging utilities
 │
 ├── artifacts/
-│   ├── embeddings.pkl                  # Cached embeddings
-│   └── evaluation_results.json         # Evaluation metrics
+│   ├── combined_embeddings.pkl     # Cached combined embeddings
+│   ├── map_inventory.json          # Processed map inventory
+│   ├── map_ocr/                    # Map OCR outputs
+│   └── evaluation_results.json     # Latest evaluation results
 │
 └── tests/
-    ├── __init__.py
     ├── test_chunker.py
     ├── test_embeddings.py
     ├── test_retriever.py
@@ -269,156 +332,111 @@ GeoRAG-Explorer/
 
 ## Key Features
 
+### Multi-source Geological Corpus
+
+The retrieval corpus combines geological reports with processed geological maps rather than relying on text reports alone.
+
 ### Metadata Preservation
 
-Every retrieved chunk retains:
-- `document_id` — Unique document identifier
-- `chunk_id` — Unique chunk identifier
-- `title` — Document title
-- `source_file` — Original filename
-- `source_url` — Original URL (if available)
-- `document_type` — e.g., "geological_report", "map", "assessment"
-- Additional domain fields (location, commodity, geological_unit, etc.)
+Retrieved chunks retain metadata such as:
 
-### Grounded Generation
+- `document_id`
+- `chunk_id`
+- `chunk_index`
+- `title`
+- `source_file`
+- `document_type`
+- `page_number` when available
+- Map-specific metadata when available
 
-The LLM generation prompt explicitly instructs the model to:
+### Local Embedding Cache
 
-1. Use only retrieved evidence
-2. Never invent geological facts
-3. State when evidence is insufficient
-4. Cite specific sources
-5. Distinguish explicit information from inference
-6. Preserve geological terminology
+Embeddings are cached in:
 
-### Embeddings Caching
-
-Embeddings are cached locally after generation to avoid re-embedding and excessive API calls:
-
-```python
-embeddings = embedding_gen.embed_chunks(chunks, cache_path="artifacts/embeddings.pkl")
+```text
+artifacts/combined_embeddings.pkl
 ```
 
-Subsequent runs load from cache.
+This avoids recomputing embeddings every time the pipeline is initialized when the cached corpus remains valid.
 
-### Configurable Retrieval
+### Hybrid Retrieval
 
-```python
-retriever = VectorRetriever(chunks, embeddings, top_k=5)
-answer = rag.query(question, top_k=10)  # Override at query time
-```
+The retriever combines semantic similarity with lexical relevance and domain-specific signals. Candidate results are subsequently reranked and diversified before context expansion.
 
-### Error Handling & Logging
+### Domain-aware Retrieval
 
-All modules include:
-- Type hints
-- Docstrings
-- Error handling with clear messages
-- Structured logging (INFO, DEBUG, WARNING, ERROR)
+Special handling exists for geological structures and high-value evidence such as Target Uranium sections and the Criteria Catalogue.
 
-## Example Queries
+### Map OCR
 
-The system is designed to handle geological questions such as:
+Image-based geological maps are rendered at higher resolution and processed with OCR so that map labels and legends can become searchable evidence.
 
-```
+### Reproducible Evaluation
+
+The project includes a test-question evaluation pipeline and a 20-test regression suite so retrieval changes can be checked before and after modifications.
+
+## Example Questions
+
+The system is designed to handle questions such as:
+
+```text
 What minerals occur in Ogun State?
 Where are copper anomalies reported?
+Which states are shown along the copper corridor in Nigeria?
+What financing was secured for implementation of the MinDiver Project?
 What geological units are associated with lithium occurrences?
-Which Nigerian regions contain a particular mineral?
 What are the strongest geochemical anomalies?
+What further investigation was recommended?
 What geological formations occur in a particular area?
 Which maps contain information about a particular commodity?
 What mineral resources are associated with a particular geological unit?
-What geological information is available for a particular state?
 ```
-
-All answers include source citations and confidence disclaimers.
-
-## Evaluation
-
-### Phase 6 Evaluation
-
-When `data/test_questions.csv` is provided, run:
-
-```python
-from src.evaluation import evaluate_rag
-
-results = evaluate_rag(
-    rag_pipeline=rag,
-    questions_csv="data/test_questions.csv",
-    output_path="artifacts/evaluation_results.json"
-)
-
-print(results.summary())
-```
-
-Metrics include:
-- `Recall@K` (K=1, 3, 5)
-- Mean Reciprocal Rank (MRR)
-- Answer accuracy (if reference answers available)
-- Source citation accuracy
-
-### Current Status
-
-**Phase 1**: Complete text-based pipeline.  
-**Evaluation**: Awaiting test question CSV. The evaluation module is ready; provide `data/test_questions.csv` to run full evaluation.
-
-## Limitations
-
-### Phase 1
-
-- **Text only** — Maps and geochemical PDFs not yet processed
-- **Local vector index** — No persistent database; embeddings regenerated on startup
-- **Single retrieval method** — Semantic search only; no BM25 or metadata filtering
-- **No reranking** — Results ranked by cosine similarity only
-
-### Data
-
-- Geological information sourced from provided reports only
-- No hard-coded geological knowledge
-- System will return "insufficient evidence" rather than rely on background knowledge
-- Map processing deferred to Phase 3 (after geological PDFs provided)
 
 ## Roadmap
 
-| Phase | Focus | Status |
-|-------|-------|--------|
+| Stage | Focus | Status |
+|---|---|---|
 | 1 | Text-based RAG baseline | ✅ Complete |
-| 2 | PDF report extraction | ⏳ Planned |
-| 3 | Geological map processing | ⏳ Planned (after PDFs provided) |
-| 4 | Hybrid retrieval (semantic + BM25 + metadata) | ⏳ Planned |
-| 5 | Reranking | ⏳ Planned |
-| 6 | Evaluation against test questions | ⏳ Planned (after test CSV provided) |
-| 7 | Portfolio presentation | ⏳ Planned |
+| 2 | PDF geological report extraction | ✅ Complete |
+| 3 | Geological map processing and OCR | ✅ Complete |
+| 4.1 | Candidate-pool retrieval | ✅ Complete |
+| 4.2 | Feature-based reranking | ✅ Complete |
+| 4.3 | Diversity control | ✅ Complete |
+| 4.4 | Context expansion | ✅ Complete |
+| 4.5 | Factual-evidence strengthening | ✅ Complete |
+| 5 | Systematic evaluation and targeted improvement | 🔄 In progress |
+| 6 | Portfolio presentation and final documentation | ⏳ Planned |
 
-## Contributing
+## Current Next Steps
 
-Geological expertise welcome. When providing:
+Stage 5 focuses on systematic analysis of the evaluation results rather than adding retrieval features without evidence. The next work includes:
 
-- **PDF reports**: Will be integrated via Phase 2 PDF processor
-- **Geological maps**: Will be analyzed for content and structure; map-specific processing designed based on actual PDF contents
-- **Test questions**: Will drive Phase 6 evaluation and benchmark improvements
+1. Identify the remaining Fair and Poor answers
+2. Separate retrieval failures from generation failures
+3. Inspect weak-question evidence coverage
+4. Apply targeted improvements only where justified
+5. Re-run the 30-question benchmark
+6. Lock the best-performing configuration
+7. Prepare the project for portfolio presentation
 
-## Citation & Attribution
+## Limitations
 
-This project uses:
-- Geological data from publicly available sources (primarily NGSA)
-- OpenAI API for embeddings and LLM generation
-- Open-source Python libraries (see requirements.txt)
+- The current corpus is limited to the geological documents and maps available to the project.
+- OCR on dense geological maps can contain recognition noise.
+- The current local language model is relatively small and may produce weaker answers for complex synthesis questions.
+- The vector index is currently maintained through local cached embeddings rather than a dedicated production vector database.
+- Evaluation quality depends on the coverage and quality of the provided reference questions and answers.
 
-When using this system for research or publication, cite:
-1. Original geological data sources
-2. This repository
-3. OpenAI models used
+## Data and Attribution
+
+The project uses geological material supplied for the project, including publicly available Nigerian geological information and processed geological reports/maps.
+
+When using this system for research or publication, cite the original geological data sources and the GeoRAG Explorer repository.
 
 ## License
 
-MIT License — see LICENSE file.
-
-## Support
-
-For questions, issues, or contributions, please open a GitHub issue.
+MIT License — see `LICENSE` for details.
 
 ---
 
-**Built with geology expertise, modular Python design, and rigorous source grounding.**
+**GeoRAG Explorer — grounded geological information retrieval with local RAG, hybrid search, map OCR, and evidence-focused evaluation.**
