@@ -1,4 +1,4 @@
-"""Hybrid retrieval for geological document analysis.
+﻿"""Hybrid retrieval for geological document analysis.
 
 Combines:
 1. Semantic similarity using embeddings
@@ -254,13 +254,43 @@ class VectorRetriever:
                 "Using semantic-only retrieval"
             )
 
+
         # ---------------------------------------------------------
-        # 3. Rank results
+        # 3. Rank candidate pool
         # ---------------------------------------------------------
 
-        top_indices = np.argsort(
+        candidate_k = min(
+            max(top_k * 4, 20),
+            len(self.chunks),
+        )
+
+        candidate_indices = np.argsort(
             combined_scores
-        )[::-1][:top_k]
+        )[::-1][:candidate_k]
+
+        # ---------------------------------------------------------
+        # 4. Reranking placeholder
+        # ---------------------------------------------------------
+
+        # Stage 4 will rerank these candidates.
+        # For now, preserve the original hybrid ordering.
+        reranked_indices = self._rerank_candidates(
+            candidate_indices,
+            combined_scores,
+            query_text,
+        )
+        diverse_indices = self._apply_diversity(
+            reranked_indices,
+            combined_scores,
+            top_k,
+        )
+
+        expanded_indices = self._expand_retrieved_indices(
+            diverse_indices,
+            window=1,
+        )
+
+        top_indices = expanded_indices[:top_k]
 
         results = []
 
@@ -277,6 +307,241 @@ class VectorRetriever:
             )
 
         return results
+
+
+    def _rerank_candidates(
+        self,
+        candidate_indices: np.ndarray,
+        combined_scores: np.ndarray,
+        query_text: str | None = None,
+    ) -> np.ndarray:
+        """Rerank an already retrieved candidate pool."""
+
+        if len(candidate_indices) == 0:
+            return candidate_indices
+
+        rerank_scores = combined_scores[candidate_indices].astype(float).copy()
+
+        if query_text:
+            lexical_scores = self._lexical_scores(query_text)
+            rerank_scores += 0.20 * lexical_scores[candidate_indices]
+
+            factual_scores = self._factual_relevance_scores(
+                query_text
+            )
+            rerank_scores += 0.30 * factual_scores[candidate_indices]
+
+            rerank_scores += self._target_uranium_section_boost(
+                query_text
+            )[candidate_indices]
+
+            rerank_scores += self._criteria_catalogue_boost(
+                query_text
+            )[candidate_indices]
+
+        order = np.argsort(rerank_scores)[::-1]
+        return candidate_indices[order]
+
+
+    def _apply_diversity(
+        self,
+        candidate_indices: np.ndarray,
+        scores: np.ndarray,
+        top_k: int,
+    ) -> np.ndarray:
+        """Select high-scoring candidates while reducing near-duplicates."""
+
+        if len(candidate_indices) <= top_k:
+            return candidate_indices
+
+        selected = []
+        seen_keys = set()
+
+        for idx in candidate_indices:
+            chunk = self.chunks[idx]
+
+            # Prefer document + chunk index as the primary identity.
+            metadata = chunk.metadata or {}
+            section = metadata.get("section")
+
+            if section:
+                diversity_key = (
+                    chunk.document_id,
+                    str(section),
+                )
+            else:
+                diversity_key = (
+                    chunk.document_id,
+                    chunk.chunk_index,
+                )
+
+            if diversity_key in seen_keys:
+                continue
+
+            selected.append(idx)
+            seen_keys.add(diversity_key)
+
+            if len(selected) >= top_k:
+                break
+
+        # If diversity filtering was too aggressive, fill remaining
+        # positions with the highest-ranked candidates.
+        if len(selected) < top_k:
+            for idx in candidate_indices:
+                if idx not in selected:
+                    selected.append(idx)
+
+                if len(selected) >= top_k:
+                    break
+
+        return np.asarray(selected[:top_k], dtype=int)
+
+
+    def _expand_retrieved_indices(
+        self,
+        indices: np.ndarray,
+        window: int = 1,
+    ) -> np.ndarray:
+        """Add nearby chunks from the same document to retrieved results."""
+
+        expanded = []
+
+        for idx in indices:
+            expanded.append(int(idx))
+
+            chunk = self.chunks[idx]
+
+            for offset in range(1, window + 1):
+                for neighbor_idx in (
+                    idx - offset,
+                    idx + offset,
+                ):
+                    if 0 <= neighbor_idx < len(self.chunks):
+                        neighbor = self.chunks[neighbor_idx]
+
+                        if neighbor.document_id == chunk.document_id:
+                            neighbor_text = neighbor.text.strip().lower()
+
+                            # Avoid expanding into obvious table-of-contents
+                            # entries such as "Criteria Catalogue 317".
+                            is_toc_entry = (
+                                "criteria catalogue" in neighbor_text
+                                and len(neighbor_text) < 100
+                                and "\n" not in neighbor_text
+                            )
+
+                            if not is_toc_entry:
+                                expanded.append(int(neighbor_idx))
+
+        # Preserve order while removing duplicates.
+        return np.asarray(
+            list(dict.fromkeys(expanded)),
+            dtype=int,
+        )
+
+
+    def _factual_relevance_scores(
+        self,
+        query_text: str,
+    ) -> np.ndarray:
+        """Score candidates for factual/detail overlap with the query."""
+
+        scores = np.zeros(len(self.chunks), dtype=np.float32)
+
+        query_lower = query_text.lower()
+
+        # Extract explicit numbers, including decimals and percentages.
+        query_numbers = set(
+            re.findall(
+                r"(?<!\w)\d+(?:\.\d+)?%?(?!\w)",
+                query_lower,
+            )
+        )
+
+        # Extract section identifiers such as 7.5.2.1.
+        query_sections = set(
+            re.findall(
+                r"\b\d+(?:\.\d+){2,}\b",
+                query_lower,
+            )
+        )
+
+        # Extract Target Uranium identifiers.
+        target_matches = re.findall(
+            r"target\s+uranium\s+(\d+)",
+            query_lower,
+        )
+        query_targets = {
+            f"target uranium {number}"
+            for number in target_matches
+        }
+
+        # Terms that commonly signal factual/evidence requests.
+        factual_terms = {
+            "value",
+            "values",
+            "number",
+            "numbers",
+            "percentage",
+            "percent",
+            "depth",
+            "thickness",
+            "grade",
+            "location",
+            "located",
+            "state",
+            "states",
+            "recommended",
+            "recommendation",
+            "investigation",
+            "result",
+            "results",
+            "identified",
+            "occurred",
+            "occurrence",
+        }
+
+        query_terms = set(self._extract_terms(query_text))
+        factual_query_terms = query_terms & factual_terms
+
+        for idx, chunk in enumerate(self.chunks):
+            text = chunk.text.lower()
+
+            score = 0.0
+
+            chunk_numbers = set(
+                re.findall(
+                    r"(?<!\w)\d+(?:\.\d+)?%?(?!\w)",
+                    text,
+                )
+            )
+
+            if query_numbers:
+                score += 0.5 * len(query_numbers & chunk_numbers)
+
+            chunk_sections = set(
+                re.findall(
+                    r"\b\d+(?:\.\d+){2,}\b",
+                    text,
+                )
+            )
+
+            if query_sections:
+                score += 1.0 * len(query_sections & chunk_sections)
+
+            for target in query_targets:
+                if target in text:
+                    score += 2.0
+
+            if factual_query_terms:
+                chunk_terms = set(self._extract_terms(chunk.text))
+                score += 0.25 * len(
+                    factual_query_terms & chunk_terms
+                )
+
+            scores[idx] = score
+
+        return scores
 
     def _index_target_uranium_sections(
         self,
@@ -639,3 +904,7 @@ class VectorRetriever:
         ) / 2.0
 
         return similarities
+
+
+
+
