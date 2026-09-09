@@ -11,14 +11,14 @@ from src.chunker import Chunker
 
 def test_embedding_generator_initialization():
     """Test EmbeddingGenerator initialization."""
-    # This requires OPENAI_API_KEY to be set
     try:
         config = Config()
         gen = EmbeddingGenerator(config)
         assert gen.config == config
-        assert gen.client is not None
+        assert gen.model is not None
+        assert gen.model.get_embedding_dimension() == 384
     except ValueError as e:
-        pytest.skip(f"OpenAI API key not configured: {e}")
+        pytest.skip(f"Configuration is not available: {e}")
 
 
 def test_cosine_similarity():
@@ -41,7 +41,7 @@ def test_cosine_similarity():
     assert scores[1] < 0.6
 
 
-def test_embedding_cache():
+def test_embedding_cache(tmp_path: Path):
     """Test embedding caching mechanism."""
     try:
         config = Config()
@@ -61,7 +61,7 @@ def test_embedding_cache():
             pytest.skip("No chunks created")
         
         # Generate embeddings with cache
-        cache_path = Path("/tmp/test_embeddings.pkl")
+        cache_path = tmp_path / "test_embeddings.pkl"
         embeddings = gen.embed_chunks(chunks, cache_path=cache_path, force_regenerate=True)
         
         assert embeddings.shape[0] == len(chunks)
@@ -72,7 +72,5 @@ def test_embedding_cache():
         assert embeddings_cached.shape == embeddings.shape
         np.testing.assert_array_almost_equal(embeddings, embeddings_cached)
         
-        # Cleanup
-        cache_path.unlink()
     except ValueError as e:
-        pytest.skip(f"OpenAI API key not configured: {e}")
+        pytest.skip(f"Configuration is not available: {e}")

@@ -65,3 +65,26 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Generated evaluation outputs
+artifacts/evaluation_*.json
+artifacts/map_corpus_test.txt
+artifacts/map_inventory.json
+
+# Generated map processing outputs
+artifacts/map_ocr/
+artifacts/map_ocr_test/
+artifacts/map_images/
+artifacts/map_tiles/
+
+# Generated previews and temporary inspection files
+*_preview.png
+copper_corridor_preview.png
+map_stage3_preview.png
+inspect_*.py
+
+# Local backup copies
+src/*_backup*.py
+src/rag_pipeline_before_*.py
+src/rag_pipeline.py.backup*
+test_final_answers.py
