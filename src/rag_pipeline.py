@@ -1,4 +1,4 @@
-﻿"""Retrieval-Augmented Generation pipeline for geological document analysis.
+"""Retrieval-Augmented Generation pipeline for geological document analysis.
 
 The pipeline:
 1. Loads geological documents.
@@ -545,7 +545,7 @@ class RAGPipeline:
         question_type = self._question_type(question)
 
         raw_parts = re.split(
-            r"(?<=[.!?])\s+|\n+",
+            r"\n\s*\n+",
             context,
         )
 
@@ -821,11 +821,34 @@ class RAGPipeline:
         )
 
         # ---------------------------------------------------------
-        # Remove duplicates.
+        # Remove duplicates while preserving complementary evidence.
         # ---------------------------------------------------------
 
         selected = []
         seen = set()
+
+        # First preserve evidence for distinct important query terms.
+        # This helps multi-part questions such as Durov + Gibbs and
+        # Mayo Lope + Mika, where the answer requires multiple facts.
+        priority_terms = [
+            term
+            for term in terms
+            if len(term) >= 4
+            and term not in {
+                "purpose",
+                "objective",
+                "objectives",
+                "recommendation",
+                "recommendations",
+                "investigation",
+                "investigations",
+                "results",
+                "result",
+                "processes",
+            }
+        ]
+
+        covered_terms = set()
 
         for _, text in candidates:
             normalized = re.sub(
@@ -837,11 +860,41 @@ class RAGPipeline:
             if normalized in seen:
                 continue
 
-            seen.add(normalized)
-            selected.append(text)
+            text_lower = text.lower()
+            matched_priority = {
+                term
+                for term in priority_terms
+                if re.search(
+                    rf"\b{re.escape(term)}\b",
+                    text_lower,
+                )
+            }
 
-            if len(selected) >= 15:
-                break
+            if matched_priority - covered_terms:
+                seen.add(normalized)
+                selected.append(text)
+                covered_terms.update(matched_priority)
+
+                if len(selected) >= 15:
+                    break
+
+        # Fill remaining slots using the normal score ordering.
+        if len(selected) < 15:
+            for _, text in candidates:
+                normalized = re.sub(
+                    r"\s+",
+                    " ",
+                    text.lower(),
+                ).strip()
+
+                if normalized in seen:
+                    continue
+
+                seen.add(normalized)
+                selected.append(text)
+
+                if len(selected) >= 15:
+                    break
 
         return selected
 
@@ -1070,7 +1123,7 @@ class RAGPipeline:
         if "area" in q:
             exact_area = re.search(
                 r"Total\s+area\s*:\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s*"
-                r"(km(?:Â²|2|\^2)|sq\.?\s*km)",
+                r"(km(?:²|2|\^2)|sq\.?\s*km)",
                 scoped_context,
                 re.IGNORECASE,
             )
@@ -1080,13 +1133,13 @@ class RAGPipeline:
             value = first(
                 [
                     r"(?:total\s+area|area)\b[^\d\n]{0,100}"
-                    r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(km(?:Â²|2|\^2)|sq\.?\s*km)",
+                    r"(\d+(?:,\d{3})*(?:\.\d+)?)\s*(km(?:²|2|\^2)|sq\.?\s*km)",
                 ],
                 scoped_context,
             )
             if value:
                 unit = re.search(
-                    r"\d+(?:,\d{3})*(?:\.\d+)?\s*(km(?:Â²|2|\^2)|sq\.?\s*km)",
+                    r"\d+(?:,\d{3})*(?:\.\d+)?\s*(km(?:²|2|\^2)|sq\.?\s*km)",
                     scoped_context,
                     re.IGNORECASE,
                 )
@@ -1097,7 +1150,7 @@ class RAGPipeline:
                 prospect = requested_prospects[0]
                 prospect_match = re.search(
                     rf"\b{re.escape(prospect)}\s+prospect\b"
-                    r"(?P<evidence>.*?)(?=\n\s*[-â€¢]|\b(?:Mayo\s+Lope|Mika)\s+prospect\b|\Z)",
+                    r"(?P<evidence>.*?)(?=\n\s*[-•]|\b(?:Mayo\s+Lope|Mika)\s+prospect\b|\Z)",
                     scoped_context,
                     re.IGNORECASE | re.DOTALL,
                 )
@@ -1545,7 +1598,7 @@ class RAGPipeline:
             geology = re.search(
                 r"Target Uranium 1.*?"
                 r"Geology:\s*(Sandstones,\s*shales,\s*mudstones\s+and\s+coal"
-                r"\s*\(Cnl\s+and\s+Cms\s*[–-]\s*Late\s+Cretaceous\s+post-rift\))\.",
+                r"\s*\(Cnl\s+and\s+Cms\s*[�-]\s*Late\s+Cretaceous\s+post-rift\))\.",
                 context,
                 re.IGNORECASE | re.DOTALL,
             )
@@ -1645,7 +1698,7 @@ class RAGPipeline:
                 re.IGNORECASE | re.DOTALL,
             )
             gibbs = re.search(
-                r"Gibbs.*?"
+                r"Gibb(?:s|[’]s)?\s+plot.*?"
                 r"evaporation[-\s]+crystallization.*?"
                 r"rock\s+weathering",
                 context,
@@ -1758,7 +1811,7 @@ class RAGPipeline:
 
         if "piper" in q and "schoeller" in q:
             normalized_context = re.sub(r"\s+", " ", scoped_context)
-            if re.search(r"piper and schoeller['â€™]?s plots both show na and cl as the dominant cation and anion, with elevated concentration of ca in lower benue trough", normalized_context, re.IGNORECASE):
+            if re.search(r"piper and schoeller['’]?s plots both show na and cl as the dominant cation and anion, with elevated concentration of ca in lower benue trough", normalized_context, re.IGNORECASE):
                 return (
                     "The Piper and Schoeller plots showed Na and Cl as the "
                     "dominant cation and anion, with elevated Ca in the "
@@ -1767,7 +1820,7 @@ class RAGPipeline:
 
         if "durov" in q and "gibbs" in q:
             normalized_context = re.sub(r"\s+", " ", scoped_context)
-            if re.search(r"durov['â€™]?s plot shows reverse ion exchange", normalized_context, re.IGNORECASE) and re.search(r"gibb['â€™]?s plot identified evaporation[- ]crystallization and rock weathering", normalized_context, re.IGNORECASE):
+            if re.search(r"durov['’]?s plot shows reverse ion exchange", normalized_context, re.IGNORECASE) and re.search(r"gibb['’]?s plot identified evaporation[- ]crystallization and rock weathering", normalized_context, re.IGNORECASE):
                 return (
                     "The Durov plot indicated reverse ion exchange, while the "
                     "Gibbs plot identified evaporation-crystallization and "
@@ -1819,7 +1872,7 @@ class RAGPipeline:
                 r"(?:mining\s+investment\s+facilitation\s+activities\s+on\s+"
                 r"acquired\s+geological\s+information).*?"
                 r"(?:identification,?\s+ranking\s+and\s+selection\s+of\s+"
-                r"exploration\s+targets\s+D1\s*[â€“-]\s*D3)",
+                r"exploration\s+targets\s+D1\s*[–-]\s*D3)",
                 scoped_context,
                 re.IGNORECASE | re.DOTALL,
             )
@@ -1859,7 +1912,7 @@ class RAGPipeline:
             prospect_answers = []
             for prospect in ["Mayo Lope", "Mika"]:
                 match = re.search(
-                    rf"\b{prospect}\s+prospect\b(?P<evidence>.*?)(?=\n\s*[-â€¢]|\b(?:Mayo\s+Lope|Mika)\s+prospect\b|\Z)",
+                    rf"\b{prospect}\s+prospect\b(?P<evidence>.*?)(?=\n\s*[-•]|\b(?:Mayo\s+Lope|Mika)\s+prospect\b|\Z)",
                     scoped_context,
                     re.IGNORECASE | re.DOTALL,
                 )
@@ -2391,6 +2444,8 @@ class RAGPipeline:
         )
 
         return answer.strip()
+
+
 
 
 
