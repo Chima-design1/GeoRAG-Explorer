@@ -40,12 +40,6 @@ class Config:
         # ---------------------------------------------------------
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
 
-        if not self.openai_api_key:
-            raise ValueError(
-                "OPENAI_API_KEY environment variable not set. "
-                "Please create a .env file or set the variable."
-            )
-
         # ---------------------------------------------------------
         # Model configuration
         # ---------------------------------------------------------
