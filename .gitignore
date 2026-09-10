@@ -46,7 +46,6 @@ env/
 *.ipynb_checkpoints
 
 # Large generated files (do not commit)
-artifacts/embeddings.pkl
 *.pkl
 *.pickle
 
@@ -88,3 +87,4 @@ src/*_backup*.py
 src/rag_pipeline_before_*.py
 src/rag_pipeline.py.backup*
 test_final_answers.py
+!artifacts/combined_embeddings.pkl
