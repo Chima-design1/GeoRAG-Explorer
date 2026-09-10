@@ -6,40 +6,45 @@
 
 GeoRAG Explorer is an end-to-end geological Retrieval-Augmented Generation system designed to answer questions about geological resources, mineral occurrences, geochemical information, geological formations, exploration targets, and mining-related information using a corpus of geological reports and thematic maps.
 
-The system is designed around **grounded evidence retrieval**: answers are generated from retrieved geological evidence rather than relying on unsupported background knowledge. The pipeline also preserves document and map metadata to support source traceability.
+The system is built around **grounded evidence retrieval**: answers are generated from retrieved geological evidence rather than relying on unsupported background knowledge. Document and map metadata are preserved to support source traceability.
 
-## Current Project Status
+## Project Status
 
-The project has progressed substantially beyond the original text-only baseline.
+The core RAG system and systematic evaluation phase are complete. The current implementation has been validated against a 30-question geological benchmark and a 20-test regression suite.
 
 - **2 geological source documents** currently loaded
 - **551 geological report chunks**
 - **189 geological map chunks**
 - **740 combined chunks** in the retrieval corpus
-- Local sentence-transformer embeddings with `all-MiniLM-L6-v2`
+- Local `all-MiniLM-L6-v2` sentence-transformer embeddings
 - Hybrid semantic + lexical retrieval
 - Candidate-pool retrieval and feature-based reranking
 - Diversity control and local context expansion
 - Factual-evidence strengthening for detail-heavy questions
 - Local `Qwen/Qwen2.5-0.5B-Instruct` answer generation
+- Deterministic extraction for high-risk factual question types
 - Automated evaluation against **30 test questions**
-- **30/30 questions successfully processed** in the latest evaluation
+- **30/30 questions successfully processed**
+- **14 Excellent, 9 Good, 7 Fair, 0 Poor** answers in the latest benchmark
+- **20/20 automated regression tests passing**
 
 ### Latest Evaluation Result
 
-| Metric | Stage 4.5 Result |
+| Metric | Latest Result |
 |---|---:|
 | Questions evaluated | 30 |
 | Successful questions | 30 |
 | Average retrieval | 1.1298 |
-| Average lexical | 0.5504 |
-| Average coverage | 0.6676 |
-| Average keyword | 0.6917 |
-| Average factual match | 0.2556 |
-| Average direct match | 0.3000 |
-| **Average answer quality** | **0.6558** |
+| Average lexical | 0.6416 |
+| Average coverage | 0.7612 |
+| Average keyword | 0.7831 |
+| Average factual match | 0.2889 |
+| Average direct match | 0.4000 |
+| **Average answer quality** | **0.7549** |
 
-**Answer quality distribution:** 10 Excellent, 9 Good, 7 Fair, 4 Poor.
+**Answer quality distribution:** 14 Excellent, 9 Good, 7 Fair, 0 Poor.
+
+The benchmark was improved through targeted, evidence-driven fixes rather than indiscriminate prompt changes. The final validated checkpoint eliminated all Poor answers while maintaining 30/30 successful processing.
 
 ## Problem Statement
 
@@ -52,7 +57,7 @@ Geologists, mineral explorers, researchers, and resource professionals often nee
 - Mineral-corridor and schist-belt mapping
 - Exploration-target documentation
 
-Traditional keyword search can struggle with complex geological questions that require combining terminology, locations, numbers, sections, and contextual evidence. GeoRAG Explorer addresses this with semantic retrieval, lexical matching, reranking, context expansion, and grounded generation.
+Traditional keyword search can struggle with geological questions that require combining terminology, locations, numbers, sections, and contextual evidence. GeoRAG Explorer addresses this with semantic retrieval, lexical matching, reranking, context expansion, and grounded generation.
 
 ## Architecture
 
@@ -84,7 +89,9 @@ Traditional keyword search can struggle with complex geological questions that r
                               │
                      Grounded Context
                               │
-                   Local Qwen Generation
+                   Deterministic Extraction
+                              │
+                     Local Qwen Generation
                               │
                   ┌───────────┴───────────┐
                   │                       │
@@ -137,7 +144,7 @@ The current map corpus contains **29 processed geological map PDFs**, including 
 
 ## Retrieval and Reranking
 
-The current retrieval pipeline has evolved through several controlled stages.
+The retrieval pipeline evolved through controlled, measurable stages.
 
 ### Stage 4.1 — Candidate Pool
 
@@ -157,14 +164,17 @@ Nearby chunks from the same document are considered to preserve local context ar
 
 ### Stage 4.5 — Factual-Evidence Strengthening
 
-The retriever now gives additional weight to evidence containing factual details relevant to the question, including:
+The retriever gives additional weight to evidence containing factual details relevant to the question, including:
 
 - Explicit numbers and percentages
 - Section identifiers
 - Target Uranium identifiers
-- Factual query terms such as location, depth, grade, results, and recommendations
+- Locations
+- Grades and depths
+- Results and recommendations
+- Other question-specific factual terms
 
-This stage improved the latest average answer-quality score from **0.6327 to 0.6558**.
+This stage was followed by targeted evaluation improvements that strengthened deterministic answers for difficult factual questions without changing the underlying corpus.
 
 ## Grounded Generation
 
@@ -183,7 +193,7 @@ The generation pipeline is designed to:
 5. Prefer explicit evidence over unsupported inference
 6. Provide source information alongside the generated answer
 
-For high-risk factual questions, the pipeline also includes deterministic extraction logic for information such as numerical values, locations, map-selected states, financing, project purposes, results, and recommendations.
+For high-risk factual questions, deterministic extraction logic is used for information such as numerical values, locations, target identifiers, financing, project purposes, results, recommendations, geological descriptions, and uranium occurrences. This reduces dependence on a small local language model for facts that can be extracted directly from retrieved evidence.
 
 ## Evaluation
 
@@ -205,20 +215,21 @@ The evaluation tracks retrieval and answer-oriented metrics including retrieval 
 
 ### Latest Benchmark
 
-The current Stage 4.5 benchmark contains **30 questions**, with all 30 successfully processed.
+The final validated benchmark contains **30 questions**, with all 30 successfully processed.
 
 ```text
-Average answer quality: 0.6558
+Successful questions: 30/30
+Average answer quality: 0.7549
 
-Excellent: 10
-Good:      9
-Fair:      7
-Poor:      4
+Excellent: 14
+Good:       9
+Fair:       7
+Poor:       0
 ```
 
-## Tests
+### Regression Tests
 
-The current automated regression test suite contains **20 passing tests**.
+The current automated regression suite contains **20 passing tests**.
 
 Run:
 
@@ -226,7 +237,7 @@ Run:
 python -m pytest -q
 ```
 
-Expected result for the current checkpoint:
+Expected result for the validated checkpoint:
 
 ```text
 20 passed
@@ -371,9 +382,13 @@ Special handling exists for geological structures and high-value evidence such a
 
 Image-based geological maps are rendered at higher resolution and processed with OCR so that map labels and legends can become searchable evidence.
 
+### Evidence-focused Answering
+
+For questions where exact values or named geological features matter, the system can use deterministic extraction alongside the local language model. This is particularly useful for numerical grades, locations, project purposes, recommendations, and mineral occurrences.
+
 ### Reproducible Evaluation
 
-The project includes a test-question evaluation pipeline and a 20-test regression suite so retrieval changes can be checked before and after modifications.
+The project includes a test-question evaluation pipeline and a 20-test regression suite so retrieval and answer-generation changes can be checked before and after modifications.
 
 ## Example Questions
 
@@ -390,6 +405,7 @@ What further investigation was recommended?
 What geological formations occur in a particular area?
 Which maps contain information about a particular commodity?
 What mineral resources are associated with a particular geological unit?
+What uranium occurrences are identified at Target Uranium 2?
 ```
 
 ## Roadmap
@@ -404,20 +420,39 @@ What mineral resources are associated with a particular geological unit?
 | 4.3 | Diversity control | ✅ Complete |
 | 4.4 | Context expansion | ✅ Complete |
 | 4.5 | Factual-evidence strengthening | ✅ Complete |
-| 5 | Systematic evaluation and targeted improvement | 🔄 In progress |
-| 6 | Portfolio presentation and final documentation | ⏳ Planned |
+| 5 | Systematic evaluation and targeted improvement | ✅ Complete |
+| 6 | Portfolio presentation and final documentation | 🔄 Current |
+
+## Stage 5 Outcome
+
+Stage 5 focused on systematic analysis of benchmark failures rather than adding retrieval features without evidence. Weak questions were inspected individually and targeted fixes were applied only where the retrieved evidence supported them.
+
+The final Stage 5 validation achieved:
+
+- **30/30 successful benchmark questions**
+- **14 Excellent answers**
+- **9 Good answers**
+- **7 Fair answers**
+- **0 Poor answers**
+- **0.7549 average answer quality**
+- **20/20 regression tests passing**
+
+The final code checkpoint was committed and pushed to GitHub as:
+
+```text
+ead872f Improve targeted factual answer extraction
+```
 
 ## Current Next Steps
 
-Stage 5 focuses on systematic analysis of the evaluation results rather than adding retrieval features without evidence. The next work includes:
+Stage 6 focuses on turning the validated research prototype into a strong portfolio project. Planned work includes:
 
-1. Identify the remaining Fair and Poor answers
-2. Separate retrieval failures from generation failures
-3. Inspect weak-question evidence coverage
-4. Apply targeted improvements only where justified
-5. Re-run the 30-question benchmark
-6. Lock the best-performing configuration
-7. Prepare the project for portfolio presentation
+1. Improve README and project documentation
+2. Document the architecture and evaluation methodology
+3. Add concise examples of retrieved evidence and grounded answers
+4. Prepare portfolio-ready screenshots or a demo workflow
+5. Add clear limitations and reproducibility notes
+6. Prepare the project for presentation to recruiters and research supervisors
 
 ## Limitations
 
@@ -425,6 +460,7 @@ Stage 5 focuses on systematic analysis of the evaluation results rather than add
 - OCR on dense geological maps can contain recognition noise.
 - The current local language model is relatively small and may produce weaker answers for complex synthesis questions.
 - The vector index is currently maintained through local cached embeddings rather than a dedicated production vector database.
+- Deterministic extraction improves reliability for known factual question patterns but is not a substitute for general semantic reasoning.
 - Evaluation quality depends on the coverage and quality of the provided reference questions and answers.
 
 ## Data and Attribution
