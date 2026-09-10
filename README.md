@@ -16,7 +16,7 @@ The system is built around **grounded evidence retrieval**: answers are generate
 
 ## Project Status
 
-The core RAG system and systematic evaluation phase are complete. The current implementation has been validated against a 30-question geological benchmark and a 20-test regression suite.
+The core RAG system, systematic evaluation, deployment, and portfolio documentation are complete. The current implementation has been validated against a 30-question geological benchmark and a 20-test regression suite.
 
 - **2 geological source documents** currently loaded
 - **551 geological report chunks**
@@ -33,6 +33,8 @@ The core RAG system and systematic evaluation phase are complete. The current im
 - **30/30 questions successfully processed**
 - **14 Excellent, 9 Good, 7 Fair, 0 Poor** answers in the latest benchmark
 - **20/20 automated regression tests passing**
+- **Streamlit Community Cloud deployment live**
+- Portfolio-ready README with architecture documentation and live demo link
 
 ### Latest Evaluation Result
 
@@ -272,7 +274,7 @@ cd GeoRAG-Explorer
 python -m venv .venv
 
 # Windows PowerShell
-.venv\Scripts\Activate.ps1
+.venv\\Scripts\\Activate.ps1
 
 # Install dependencies
 pip install -r requirements.txt
@@ -429,7 +431,7 @@ What uranium occurrences are identified at Target Uranium 2?
 | 4.4 | Context expansion | ✅ Complete |
 | 4.5 | Factual-evidence strengthening | ✅ Complete |
 | 5 | Systematic evaluation and targeted improvement | ✅ Complete |
-| 6 | Portfolio presentation and final documentation | 🔄 Current |
+| 6 | Portfolio presentation and final documentation | ✅ Complete |
 
 ## Stage 5 Outcome
 
@@ -451,16 +453,18 @@ The final code checkpoint was committed and pushed to GitHub as:
 ead872f Improve targeted factual answer extraction
 ```
 
-## Current Next Steps
+## Stage 6 Outcome
 
-Stage 6 focuses on turning the validated research prototype into a strong portfolio project. Planned work includes:
+Stage 6 focused on presenting the validated research prototype as a portfolio-ready project. Completed work includes:
 
-1. Improve README and project documentation
-2. Document the architecture and evaluation methodology
-3. Add concise examples of retrieved evidence and grounded answers
-4. Prepare portfolio-ready screenshots or a demo workflow
-5. Add clear limitations and reproducibility notes
-6. Prepare the project for presentation to recruiters and research supervisors
+- Streamlit Community Cloud deployment
+- Live demo link in the repository README
+- Professional GitHub repository description and topics
+- Architecture diagram embedded in the README
+- Documentation of the architecture, evaluation methodology, limitations, and reproducibility
+- Clear presentation of benchmark results and system capabilities
+
+The project is now at a **portfolio-ready completion checkpoint**. Future work can focus on optional enhancements such as additional screenshots, larger geological corpora, stronger language models, and production-scale vector infrastructure.
 
 ## Limitations
 
