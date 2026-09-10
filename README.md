@@ -2,6 +2,12 @@
 
 **AI-powered geological knowledge retrieval system combining geological reports, geological maps, semantic search, lexical retrieval, reranking, and Retrieval-Augmented Generation (RAG).**
 
+## 🚀 Live Demo
+
+**Try the deployed application:** https://georag-explorer.streamlit.app/
+
+GeoRAG Explorer is deployed on Streamlit Community Cloud and provides interactive geological question answering, retrieved evidence inspection, and a geological map explorer.
+
 ## Overview
 
 GeoRAG Explorer is an end-to-end geological Retrieval-Augmented Generation system designed to answer questions about geological resources, mineral occurrences, geochemical information, geological formations, exploration targets, and mining-related information using a corpus of geological reports and thematic maps.
