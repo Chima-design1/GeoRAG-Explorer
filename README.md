@@ -67,6 +67,8 @@ Traditional keyword search can struggle with geological questions that require c
 
 ## Architecture
 
+![GeoRAG Explorer Architecture](artifacts/georag_architecture.png)
+
 ```text
                          User Question
                               │
